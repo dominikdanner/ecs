@@ -18,7 +18,13 @@ fn main() {
     let mut world = World::new();
 
     world.spawn(Health(200.00));
+    world.spawn(Health(200.00));
+    world.spawn(Health(200.00));
+    world.spawn(Stamina(200.00));
+    world.spawn(Stamina(200.00));
+    world.spawn(Stamina(200.00));
 
     dbg!(world.archetype);
     dbg!(world.components);
+    dbg!(world.locations);
 }
