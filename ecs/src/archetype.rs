@@ -2,7 +2,7 @@ use std::any::TypeId;
 
 use crate::Component;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Entity(pub u32);
 
 impl Entity {
@@ -17,7 +17,7 @@ pub type ArchetypeIndex = u32;
 pub struct Archetype {
     index: ArchetypeIndex,
     entitys: Vec<u32>,
-    pub layout: EntityLayout,
+    layout: EntityLayout,
 }
 
 impl Archetype {
@@ -33,12 +33,20 @@ impl Archetype {
         self.entitys.push(entity.id())
     }
 
+    pub fn has_entity(&self, entity: &Entity) -> bool {
+        self.entitys.contains(&entity.0)
+    }
+
+    pub fn layout(&self) -> EntityLayout {
+        self.layout.clone()
+    }
+
     pub fn index(&self) -> ArchetypeIndex {
         self.index
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EntityLayout {
     components: Vec<TypeId>,
 }
@@ -60,6 +68,15 @@ impl EntityLayout {
 
     pub fn containes_type_id(&self, type_id: TypeId) -> bool {
         self.components.contains(&type_id)
+    }
+}
+
+impl IntoIterator for EntityLayout {
+    type Item = TypeId;
+    type IntoIter = <Vec<TypeId> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.components.into_iter()
     }
 }
 

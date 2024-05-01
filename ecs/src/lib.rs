@@ -5,7 +5,11 @@ use std::{
 };
 
 pub mod archetype;
+pub mod location;
 pub mod world;
+
+// A components specific index into its type storage
+type ComponentIndex = usize;
 
 // Defines a Component
 pub trait Component: Debug + Sized + Any {
@@ -15,11 +19,18 @@ pub trait Component: Debug + Sized + Any {
 
 // Defines a Storage that can store a single component
 pub trait Storage<T: Debug>: Debug + Any {
+    // creates new instance of storage
     fn new() -> Self
     where
         Self: Sized;
 
-    fn add(&mut self, component: T);
+    // pushes new component into the storage
+    fn push_component(&mut self, component: T) -> ComponentIndex;
+
+    // returns how much components are stored in a storage
+    fn size(&self) -> usize;
+
+    fn get_component(&self, index: ComponentIndex) -> &T;
 }
 
 // Holds all the storages for every single component
@@ -48,10 +59,10 @@ impl ComponentStorages {
             Some(unknown_storage) => {
                 match unknown_storage.downcast_ref::<<C as Component>::Storage>() {
                     Some(storage) => storage,
-                    None => unreachable!(""),
+                    None => unreachable!("We're fucked"),
                 }
             }
-            None => unreachable!(""),
+            None => unreachable!("We're fucked"),
         }
     }
 
@@ -68,10 +79,17 @@ impl ComponentStorages {
             Some(unknown_storage) => {
                 match unknown_storage.downcast_mut::<<C as Component>::Storage>() {
                     Some(storage) => storage,
-                    None => unreachable!(""),
+                    None => unreachable!("We're fucked"),
                 }
             }
-            None => unreachable!(""),
+            None => unreachable!("We're fucked"),
+        }
+    }
+
+    pub fn get_storage_raw(&self, type_id: TypeId) -> &Box<dyn Any> {
+        match self.storages.get(&type_id) {
+            Some(unknown_storage) => unknown_storage,
+            None => unreachable!("We're fucked"),
         }
     }
 }
@@ -94,7 +112,18 @@ where
         }
     }
 
-    fn add(&mut self, component: T) {
+    fn push_component(&mut self, component: T) -> ComponentIndex {
+        let component_index = self.size();
         self.storage.push(component);
+
+        component_index
+    }
+
+    fn size(&self) -> usize {
+        self.storage.len()
+    }
+
+    fn get_component(&self, index: ComponentIndex) -> &T {
+        self.storage.get(index).unwrap()
     }
 }
