@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{archetype::Entity, ComponentIndex};
+use crate::{archetype::Entity, storage::ComponentIndex};
 
 // Stores the Storage Location of an entity's data
 #[derive(Debug)]
