@@ -31,14 +31,10 @@ fn main() {
     let mut world = World::new();
 
     let player = world.spawn(Health(100.00));
-    let transform = world.spawn(Transform { x: 0.0, y: 0.0 });
+    let transform = world.spawn(Transform { x: 1.0, y: 199.0 });
     let stamina = world.spawn(Stamina(300.00));
 
-    let component = world.get_component::<Health>(&player);
-    dbg!(component);
-    let component = world.get_component::<Transform>(&transform);
-    dbg!(component);
-    if let Some(health) = world.get_component::<Stamina>(&stamina) {
-        dbg!(health);
+    if let Some(component) = world.get_component::<Transform>(&transform) {
+        println!("Transform: x={}, y={}", component.x, component.y);
     }
 }

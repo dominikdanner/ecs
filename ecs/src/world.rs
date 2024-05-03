@@ -2,10 +2,10 @@ use crate::{
     archetype::{ArchetypeManager, EntityLayout},
     storage::Storage,
 };
-use std::{any::TypeId, intrinsics::unreachable};
+use std::any::TypeId;
 
 use crate::{
-    archetype::{Archetype, Entity},
+    archetype::Entity,
     location::LocationMap,
     storage::{Component, ComponentStorages},
 };
@@ -13,7 +13,6 @@ use crate::{
 #[derive(Debug)]
 pub struct World {
     entity_id: u32,
-    arche_id: u32,
     pub locations: LocationMap,
     pub archetypes: ArchetypeManager,
     pub components: ComponentStorages,
@@ -23,7 +22,6 @@ impl World {
     pub fn new() -> Self {
         Self {
             entity_id: 0,
-            arche_id: 0,
             locations: LocationMap::new(),
             archetypes: ArchetypeManager::new(),
             components: ComponentStorages::new(),
@@ -32,15 +30,13 @@ impl World {
 
     // Creates new enity and adds one component to it
     pub fn spawn<C: Component>(&mut self, component: C) -> Entity {
-        let component_type_id = TypeId::of::<C>();
-
         let entity = Entity(self.entity_id);
 
         let mut layout = EntityLayout::new();
         layout.register_component::<C>();
 
         // If there is no archetype with that specific layout there is a new one created
-        match self.archetypes.find_from_layout(&layout) {
+        match self.archetypes.find_from_layout_mut(&layout) {
             Some(archetype) => {
                 archetype.assigne_entity(&entity);
             }
@@ -77,10 +73,23 @@ impl World {
 
         // Look if archetype has component that wants to be accessed
         if archetype.layout().containes_type(type_id) {
-            let (index, _archetype_component) = res.first().unwrap();
-            let storage_index = components_indicies.get(*index).unwrap();
+            let layout = archetype.layout().clone();
+
+            // Check which index the TypeId has in the location map
+            let component_type: Vec<(usize, TypeId)> = layout
+                .into_iter()
+                .enumerate()
+                .filter(|(_index, component_id)| *component_id == type_id)
+                .collect();
+            let index = component_type.first().unwrap().0;
+
+            // Get the actuall index in the storage
+            let storage_index = components_indicies[index];
+
             let storage = self.components.get_storage::<C>();
-            Some(storage.get_component(*storage_index))
+            let component = storage.get_component(storage_index.into());
+
+            Some(component)
         } else {
             None
         }

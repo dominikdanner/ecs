@@ -26,6 +26,7 @@ pub trait Storage<T: Debug>: Debug + Any {
     // returns how much components are stored in a storage
     fn size(&self) -> usize;
 
+    // returns the component with a given index
     fn get_component(&self, index: ComponentIndex) -> &T;
 }
 
@@ -42,13 +43,19 @@ impl ComponentStorages {
         }
     }
 
+    pub fn create_storage<C: Component>(&mut self) {
+        let component_type_id = TypeId::of::<C>();
+        let storage = C::Storage::new();
+
+        self.storages.insert(component_type_id, Box::from(storage));
+    }
+
+    // Gives back a reference to the components storage
     pub fn get_storage<C: Component>(&mut self) -> &C::Storage {
         let type_id = TypeId::of::<C>();
 
         if !self.storages.contains_key(&type_id) {
-            let storage = C::Storage::new();
-
-            self.storages.insert(type_id, Box::from(storage));
+            self.create_storage::<C>();
         }
 
         match self.storages.get(&type_id) {
@@ -62,13 +69,12 @@ impl ComponentStorages {
         }
     }
 
+    // Gives back a mutable reference to the components storage
     pub fn get_storage_mut<C: Component>(&mut self) -> &mut <C as Component>::Storage {
         let type_id = TypeId::of::<C>();
 
         if !self.storages.contains_key(&type_id) {
-            let storage = C::Storage::new();
-
-            self.storages.insert(type_id, Box::from(storage));
+            self.create_storage::<C>()
         }
 
         match self.storages.get_mut(&type_id) {
@@ -82,6 +88,7 @@ impl ComponentStorages {
         }
     }
 
+    // Gets storage data but type is not known
     pub fn get_storage_raw(&self, type_id: TypeId) -> &Box<dyn Any> {
         match self.storages.get(&type_id) {
             Some(unknown_storage) => unknown_storage,

@@ -13,7 +13,7 @@ impl Entity {
 
 pub type ArchetypeIndex = u32;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Archetype {
     index: ArchetypeIndex,
     entitys: Vec<u32>,
@@ -103,17 +103,26 @@ impl ArchetypeManager {
         self.archetypes.len()
     }
 
-    // Adds new archetype and returns a reference to the newly created archetype
-    pub fn add(&mut self, layout: EntityLayout) -> &Archetype {
+    // Adds new archetype and returns its archetype index
+    pub fn add(&mut self, layout: EntityLayout) -> &mut Archetype {
         let index = self.ids;
         let archetype = Archetype::new(index, layout);
 
         self.archetypes.push(archetype);
         self.ids += 1;
 
-        &archetype
+        self.get_mut(index)
     }
 
+    pub fn get(&self, index: ArchetypeIndex) -> &Archetype {
+        self.archetypes.get(index as usize).unwrap()
+    }
+
+    pub fn get_mut(&mut self, index: ArchetypeIndex) -> &mut Archetype {
+        self.archetypes.get_mut(index as usize).unwrap()
+    }
+
+    // Find an archetype that has the same layout as provided and returns a reference to it
     pub fn find_from_layout(&self, layout: &EntityLayout) -> Option<&Archetype> {
         // Checks every Archetype and compairs it to the provided layout
         let archetypes: Vec<&Archetype> = self
@@ -134,6 +143,29 @@ impl ArchetypeManager {
         }
     }
 
+    // Find an archetype that has the same layout as provided and returns a mutable reference to it
+    pub fn find_from_layout_mut(&mut self, layout: &EntityLayout) -> Option<&mut Archetype> {
+        // Checks every Archetype and compairs it to the provided layout
+        let archetypes: Vec<&mut Archetype> = self
+            .archetypes
+            .iter_mut()
+            .filter(|archetype| archetype.layout == *layout)
+            .collect();
+
+        if archetypes.is_empty() {
+            None
+        } else {
+            // There should be only 1 archetype that matches the layout
+            assert_eq!(archetypes.len(), 1);
+
+            let index = archetypes.get(0).unwrap().index;
+            let archetype = self.archetypes.get_mut(index as usize).unwrap();
+
+            Some(archetype)
+        }
+    }
+
+    // Find a an entitys archetype and returns a reference to it
     pub fn find_from_entity(&self, entity: &Entity) -> Option<&Archetype> {
         let archetypes: Vec<&Archetype> = self
             .archetypes
@@ -148,6 +180,26 @@ impl ArchetypeManager {
             assert_eq!(archetypes.len(), 1);
 
             let archetype = *archetypes.first().unwrap();
+            Some(archetype)
+        }
+    }
+
+    // Find a an entitys archetype and returns a mutable reference to it
+    pub fn find_from_entity_mut(&mut self, entity: &Entity) -> Option<&mut Archetype> {
+        let archetypes: Vec<&mut Archetype> = self
+            .archetypes
+            .iter_mut()
+            .filter(|archetype| archetype.contains_entity(entity))
+            .collect();
+
+        if archetypes.is_empty() {
+            None
+        } else {
+            // An Entity can't be assigned to two archetypes
+            assert_eq!(archetypes.len(), 1);
+
+            let index = archetypes.get(0).unwrap().index;
+            let archetype = self.archetypes.get_mut(index as usize).unwrap();
             Some(archetype)
         }
     }
