@@ -15,18 +15,18 @@ pub trait Component: Debug + Sized + Any {
 
 /// Defines a Storage that can store a single component
 pub trait Storage<T: Debug>: Debug + Any {
-    // creates new instance of storage
+    // Creates new instance of storage
     fn new() -> Self
     where
         Self: Sized;
 
-    // pushes new component into the storage
+    // Pushes new component into the storage
     fn push_component(&mut self, component: T) -> ComponentIndex;
 
-    // returns the component with a given index
+    // Returns the component with a given index
     fn get_component(&self, index: ComponentIndex) -> &T;
 
-    // Returns all components stored in the component as a slice of T
+    // Returns all components stored as a slice
     fn as_slice(&self) -> &[T];
 
     // returns how much components are stored in a storage

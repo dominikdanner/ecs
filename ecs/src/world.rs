@@ -119,6 +119,7 @@ impl World {
         component_locations.push(storage_index);
     }
 
+    // Needs rewrite hihahuuuu
     pub fn query<C: Component>(&mut self) -> &[C] {
         let storage = self.components.get_storage::<C>();
         storage.as_slice()
