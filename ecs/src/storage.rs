@@ -7,13 +7,13 @@ use std::{
 // A components specific index into its type storage
 pub type ComponentIndex = usize;
 
-// Defines a Component
+/// Defines a Component
 pub trait Component: Debug + Sized + Any {
     // The Type of Storage this Component uses
     type Storage: Storage<Self>;
 }
 
-// Defines a Storage that can store a single component
+/// Defines a Storage that can store a single component
 pub trait Storage<T: Debug>: Debug + Any {
     // creates new instance of storage
     fn new() -> Self
@@ -54,7 +54,7 @@ impl ComponentStorages {
         self.storages.insert(component_type_id, Box::from(storage));
     }
 
-    // Gives back a reference to the components storage
+    /// Gives back a reference to the components storage
     /// If storage of component does not exist it will be created automatically
     pub fn get_storage<C: Component>(&mut self) -> &C::Storage {
         let type_id = TypeId::of::<C>();

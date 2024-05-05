@@ -40,6 +40,4 @@ fn main() {
     for transform in world.query::<Transform>() {
         println!("Transform: x={}, y={}", transform.x, transform.y);
     }
-
-    dbg!(world.archetypes);
 }

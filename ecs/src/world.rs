@@ -28,7 +28,7 @@ impl World {
         }
     }
 
-    /// Creates new enity and adds one component to it
+    // Creates new enity and adds one component to it
     pub fn spawn<C: Component>(&mut self, component: C) -> Entity {
         let entity = Entity(self.entity_id);
 
@@ -64,7 +64,7 @@ impl World {
     pub fn get_component<C: Component>(&mut self, entity: &Entity) -> Option<&C> {
         let type_id = TypeId::of::<C>();
 
-        let components_indicies = self.locations.get(&entity);
+        let component_locations = self.locations.get(&entity);
 
         // Get archetype that the entity is assigned to
         let archetype = self
@@ -80,7 +80,7 @@ impl World {
                 .position(|component_id| component_id == type_id)
                 .unwrap();
 
-            let storage_index = components_indicies[index];
+            let storage_index = component_locations[index];
 
             let storage = self.components.get_storage::<C>();
             let component = storage.get_component(storage_index.into());
@@ -101,10 +101,12 @@ impl World {
             .find_from_entity_mut(entity)
             .expect("Entity has no archetype!");
 
+        // Create new layout for entity
         let mut new_layout = current_archetype.layout().clone();
         new_layout.register_component::<C>();
 
         current_archetype.unassigne_entity(entity);
+
         if let Some(archetype) = self.archetypes.find_from_layout_mut(&new_layout) {
             archetype.assigne_entity(entity)
         } else {
