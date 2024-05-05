@@ -13,7 +13,7 @@ impl Entity {
 
 pub type ArchetypeIndex = u32;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Archetype {
     index: ArchetypeIndex,
     entitys: Vec<u32>,
@@ -35,6 +35,16 @@ impl Archetype {
 
     pub fn assigne_entity(&mut self, entity: &Entity) {
         self.entitys.push(entity.id())
+    }
+
+    pub fn unassigne_entity(&mut self, target_entity: &Entity) {
+        let index = self
+            .entitys
+            .iter()
+            .position(|entity_id| entity_id == &target_entity.id())
+            .unwrap();
+
+        self.entitys.remove(index);
     }
 
     pub fn contains_entity(&self, entity: &Entity) -> bool {
@@ -85,13 +95,13 @@ impl PartialEq for EntityLayout {
 }
 
 #[derive(Debug)]
-pub struct ArchetypeManager {
-    // Provides unique indecies for the array
+pub struct ArchetypeStorage {
+    // Provides unique indecies for every archetype
     ids: ArchetypeIndex,
     archetypes: Vec<Archetype>,
 }
 
-impl ArchetypeManager {
+impl ArchetypeStorage {
     pub fn new() -> Self {
         Self {
             ids: 0,
@@ -99,12 +109,13 @@ impl ArchetypeManager {
         }
     }
 
+    /// Returns how much archetypes exist
     pub fn len(&self) -> usize {
         self.archetypes.len()
     }
 
-    // Adds new archetype and returns its archetype index
-    pub fn add(&mut self, layout: EntityLayout) -> &mut Archetype {
+    /// Adds new archetype from its layout and returns a mutable reference to it
+    pub fn create_from_layout(&mut self, layout: EntityLayout) -> &mut Archetype {
         let index = self.ids;
         let archetype = Archetype::new(index, layout);
 
@@ -122,7 +133,7 @@ impl ArchetypeManager {
         self.archetypes.get_mut(index as usize).unwrap()
     }
 
-    // Find an archetype that has the same layout as provided and returns a reference to it
+    /// Find an archetype that has the same layout as provided and returns a reference to it
     pub fn find_from_layout(&self, layout: &EntityLayout) -> Option<&Archetype> {
         // Checks every Archetype and compairs it to the provided layout
         let archetypes: Vec<&Archetype> = self
@@ -143,7 +154,7 @@ impl ArchetypeManager {
         }
     }
 
-    // Find an archetype that has the same layout as provided and returns a mutable reference to it
+    /// Find an archetype that has the same layout as provided and returns a mutable reference to it
     pub fn find_from_layout_mut(&mut self, layout: &EntityLayout) -> Option<&mut Archetype> {
         // Checks every Archetype and compairs it to the provided layout
         let archetypes: Vec<&mut Archetype> = self
@@ -165,7 +176,7 @@ impl ArchetypeManager {
         }
     }
 
-    // Find a an entitys archetype and returns a reference to it
+    /// Find a an entitys archetype and returns a reference to it
     pub fn find_from_entity(&self, entity: &Entity) -> Option<&Archetype> {
         let archetypes: Vec<&Archetype> = self
             .archetypes
@@ -184,7 +195,7 @@ impl ArchetypeManager {
         }
     }
 
-    // Find a an entitys archetype and returns a mutable reference to it
+    /// Find a an entitys archetype and returns a mutable reference to it
     pub fn find_from_entity_mut(&mut self, entity: &Entity) -> Option<&mut Archetype> {
         let archetypes: Vec<&mut Archetype> = self
             .archetypes
@@ -202,5 +213,66 @@ impl ArchetypeManager {
             let archetype = self.archetypes.get_mut(index as usize).unwrap();
             Some(archetype)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::BorrowMut;
+
+    use crate::archetype::{Archetype, Entity};
+
+    use super::{ArchetypeStorage, EntityLayout};
+
+    #[test]
+    fn archetype_create_from_layout() {
+        let mut archetype_manager = ArchetypeStorage::new();
+
+        let layout = EntityLayout::new();
+        archetype_manager.create_from_layout(layout);
+
+        let length = archetype_manager.len();
+        assert_eq!(length, 1);
+    }
+
+    #[test]
+    fn archetype_find_from_layout() {
+        let mut archetype_manager = ArchetypeStorage::new();
+
+        let layout = EntityLayout::new();
+        archetype_manager.create_from_layout(layout.clone());
+        let archetype = archetype_manager.find_from_layout(&layout).unwrap();
+
+        assert_eq!(
+            archetype,
+            Archetype {
+                layout,
+                index: 0,
+                entitys: vec![]
+            }
+            .borrow_mut()
+        )
+    }
+
+    #[test]
+    fn archetype_find_from_entity() {
+        let mut archetype_manager = ArchetypeStorage::new();
+        let entity = Entity(0);
+
+        let layout = EntityLayout::new();
+        let new_archetype = archetype_manager.create_from_layout(layout.clone());
+        new_archetype.assigne_entity(&entity);
+
+        let archetype = archetype_manager.find_from_entity(&entity).unwrap();
+
+        assert_eq!(
+            archetype,
+            Archetype {
+                layout,
+                index: 0,
+                entitys: vec![entity.id()]
+            }
+            .borrow_mut()
+        )
     }
 }

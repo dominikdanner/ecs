@@ -1,5 +1,5 @@
 use crate::{
-    archetype::{ArchetypeManager, EntityLayout},
+    archetype::{ArchetypeStorage, EntityLayout},
     storage::Storage,
 };
 use std::any::TypeId;
@@ -14,7 +14,7 @@ use crate::{
 pub struct World {
     entity_id: u32,
     pub locations: LocationMap,
-    pub archetypes: ArchetypeManager,
+    pub archetypes: ArchetypeStorage,
     pub components: ComponentStorages,
 }
 
@@ -23,12 +23,12 @@ impl World {
         Self {
             entity_id: 0,
             locations: LocationMap::new(),
-            archetypes: ArchetypeManager::new(),
+            archetypes: ArchetypeStorage::new(),
             components: ComponentStorages::new(),
         }
     }
 
-    // Creates new enity and adds one component to it
+    /// Creates new enity and adds one component to it
     pub fn spawn<C: Component>(&mut self, component: C) -> Entity {
         let entity = Entity(self.entity_id);
 
@@ -41,7 +41,7 @@ impl World {
                 archetype.assigne_entity(&entity);
             }
             None => {
-                let archetype = self.archetypes.add(layout);
+                let archetype = self.archetypes.create_from_layout(layout);
                 archetype.assigne_entity(&entity);
             }
         }
@@ -60,6 +60,7 @@ impl World {
         entity.clone()
     }
 
+    /// Get specific component of entity
     pub fn get_component<C: Component>(&mut self, entity: &Entity) -> Option<&C> {
         let type_id = TypeId::of::<C>();
 
@@ -72,18 +73,13 @@ impl World {
             .expect("Entity has no archetype!");
 
         // Look if archetype has component that wants to be accessed
-        if archetype.layout().containes_type(type_id) {
-            let layout = archetype.layout().clone();
-
-            // Check which index the TypeId has in the location map
-            let component_type: Vec<(usize, TypeId)> = layout
+        let layout = archetype.layout().clone();
+        if layout.containes_type(type_id) {
+            let index = layout
                 .into_iter()
-                .enumerate()
-                .filter(|(_index, component_id)| *component_id == type_id)
-                .collect();
-            let index = component_type.first().unwrap().0;
+                .position(|component_id| component_id == type_id)
+                .unwrap();
 
-            // Get the actuall index in the storage
             let storage_index = components_indicies[index];
 
             let storage = self.components.get_storage::<C>();
@@ -93,6 +89,37 @@ impl World {
         } else {
             None
         }
+    }
+
+    /// Extend an enity's compnents by one
+    pub fn extend<C: Component>(&mut self, entity: &Entity, component: C) {
+        let component_locations = self.locations.get_mut(entity);
+
+        // Get archetype that the entity is assigned to
+        let current_archetype = self
+            .archetypes
+            .find_from_entity_mut(entity)
+            .expect("Entity has no archetype!");
+
+        let mut new_layout = current_archetype.layout().clone();
+        new_layout.register_component::<C>();
+
+        current_archetype.unassigne_entity(entity);
+        if let Some(archetype) = self.archetypes.find_from_layout_mut(&new_layout) {
+            archetype.assigne_entity(entity)
+        } else {
+            let archetype = self.archetypes.create_from_layout(new_layout);
+            archetype.assigne_entity(entity);
+        }
+
+        let storage = self.components.get_storage_mut::<C>();
+        let storage_index = storage.push_component(component);
+        component_locations.push(storage_index);
+    }
+
+    pub fn query<C: Component>(&mut self) -> &[C] {
+        let storage = self.components.get_storage::<C>();
+        storage.as_slice()
     }
 }
 

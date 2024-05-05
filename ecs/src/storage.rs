@@ -23,11 +23,14 @@ pub trait Storage<T: Debug>: Debug + Any {
     // pushes new component into the storage
     fn push_component(&mut self, component: T) -> ComponentIndex;
 
-    // returns how much components are stored in a storage
-    fn size(&self) -> usize;
-
     // returns the component with a given index
     fn get_component(&self, index: ComponentIndex) -> &T;
+
+    // Returns all components stored in the component as a slice of T
+    fn as_slice(&self) -> &[T];
+
+    // returns how much components are stored in a storage
+    fn size(&self) -> usize;
 }
 
 // Holds all the storages for every single component
@@ -43,6 +46,7 @@ impl ComponentStorages {
         }
     }
 
+    /// Creates a new component storage
     pub fn create_storage<C: Component>(&mut self) {
         let component_type_id = TypeId::of::<C>();
         let storage = C::Storage::new();
@@ -51,6 +55,7 @@ impl ComponentStorages {
     }
 
     // Gives back a reference to the components storage
+    /// If storage of component does not exist it will be created automatically
     pub fn get_storage<C: Component>(&mut self) -> &C::Storage {
         let type_id = TypeId::of::<C>();
 
@@ -69,7 +74,8 @@ impl ComponentStorages {
         }
     }
 
-    // Gives back a mutable reference to the components storage
+    /// Gives back a mutable reference to the components storage
+    /// If storage of component does not exist it will be created automatically
     pub fn get_storage_mut<C: Component>(&mut self) -> &mut <C as Component>::Storage {
         let type_id = TypeId::of::<C>();
 
@@ -88,7 +94,7 @@ impl ComponentStorages {
         }
     }
 
-    // Gets storage data but type is not known
+    /// Gets storage data but type is not known
     pub fn get_storage_raw(&self, type_id: TypeId) -> &Box<dyn Any> {
         match self.storages.get(&type_id) {
             Some(unknown_storage) => unknown_storage,
@@ -129,5 +135,9 @@ where
 
     fn get_component(&self, index: ComponentIndex) -> &T {
         self.storage.get(index).unwrap()
+    }
+
+    fn as_slice(&self) -> &[T] {
+        self.storage.as_slice()
     }
 }

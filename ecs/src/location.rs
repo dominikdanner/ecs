@@ -15,12 +15,12 @@ impl LocationMap {
         }
     }
 
-    pub fn get(&self, entity: &Entity) -> Vec<ComponentIndex> {
-        self.locations.get(&entity).unwrap().to_vec()
+    pub fn get(&self, entity: &Entity) -> &[ComponentIndex] {
+        self.locations.get(&entity).unwrap()
     }
 
-    pub fn get_mut(&mut self, entity: &Entity) -> Vec<ComponentIndex> {
-        self.locations.get_mut(&entity).unwrap().to_vec()
+    pub fn get_mut(&mut self, entity: &Entity) -> &mut Vec<ComponentIndex> {
+        self.locations.get_mut(&entity).unwrap()
     }
 
     pub fn insert(&mut self, entity: Entity, component_indecies: Vec<ComponentIndex>) {

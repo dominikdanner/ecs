@@ -27,14 +27,19 @@ impl Component for Transform {
     type Storage = VecStorage<Self>;
 }
 
+// Hint: Order of adding components to entity creates issues with archetypes!!!
 fn main() {
     let mut world = World::new();
 
-    let player = world.spawn(Health(100.00));
-    let transform = world.spawn(Transform { x: 1.0, y: 199.0 });
-    let stamina = world.spawn(Stamina(300.00));
+    let player_1 = world.spawn(Transform { x: 1.0, y: 199.0 });
+    world.extend(&player_1, Health(100.));
 
-    if let Some(component) = world.get_component::<Transform>(&transform) {
-        println!("Transform: x={}, y={}", component.x, component.y);
+    let player_2 = world.spawn(Transform { x: 23.0, y: 100.0 });
+    world.extend(&player_2, Health(200.));
+
+    for transform in world.query::<Transform>() {
+        println!("Transform: x={}, y={}", transform.x, transform.y);
     }
+
+    dbg!(world.archetypes);
 }
