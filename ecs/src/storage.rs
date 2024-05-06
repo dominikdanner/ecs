@@ -4,7 +4,7 @@ use std::{
     fmt::Debug,
 };
 
-// A components specific index into its type storage
+/// A components specific index into its storage
 pub type ComponentIndex = usize;
 
 /// Defines a Component

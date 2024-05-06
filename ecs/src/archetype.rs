@@ -56,6 +56,10 @@ impl Archetype {
     }
 }
 
+pub trait LayoutFilter {
+    fn matches_layout(&self, other: EntityLayout);
+}
+
 #[derive(Debug, Clone)]
 pub struct EntityLayout {
     layout: Vec<TypeId>,
@@ -125,10 +129,12 @@ impl ArchetypeStorage {
         self.get_mut(index)
     }
 
+    /// Get archetype from index as a reference
     pub fn get(&self, index: ArchetypeIndex) -> &Archetype {
         self.archetypes.get(index as usize).unwrap()
     }
 
+    /// Get archetype from index mutable
     pub fn get_mut(&mut self, index: ArchetypeIndex) -> &mut Archetype {
         self.archetypes.get_mut(index as usize).unwrap()
     }

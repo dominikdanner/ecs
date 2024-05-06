@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use crate::{
     archetype::{ArchetypeStorage, EntityLayout},
+    entry::Entry,
+    location::EntityLocation,
     storage::Storage,
 };
-use std::any::TypeId;
 
 use crate::{
     archetype::Entity,
@@ -28,6 +31,19 @@ impl World {
         }
     }
 
+    pub fn entry<'a>(&'a mut self, entity: &'a Entity) -> Entry<'a> {
+        let archetype = self.archetypes.find_from_entity(entity).unwrap();
+
+        let mut components = HashMap::new();
+        for component_id in archetype.layout().clone().into_iter() {
+            let unknown_storage = self.components.get_storage_raw(component_id);
+            components.insert(component_id, unknown_storage);
+        }
+
+        let locations = self.locations.get(entity);
+        Entry::new(entity, archetype, components, locations)
+    }
+
     // Creates new enity and adds one component to it
     pub fn spawn<C: Component>(&mut self, component: C) -> Entity {
         let entity = Entity(self.entity_id);
@@ -36,15 +52,17 @@ impl World {
         layout.register_component::<C>();
 
         // If there is no archetype with that specific layout there is a new one created
-        match self.archetypes.find_from_layout_mut(&layout) {
+        let archetype = match self.archetypes.find_from_layout_mut(&layout) {
             Some(archetype) => {
                 archetype.assigne_entity(&entity);
+                archetype
             }
             None => {
                 let archetype = self.archetypes.create_from_layout(layout);
                 archetype.assigne_entity(&entity);
+                archetype
             }
-        }
+        };
 
         // Get component type specific storage
         let storage = self.components.get_storage_mut::<C>();
@@ -52,43 +70,13 @@ impl World {
         // Push new component into storage
         let component_index = storage.push_component(component);
 
+        let location = EntityLocation::new(archetype.index(), component_index);
         // Insert the component index from storage into location map
-        self.locations.insert(entity, vec![component_index]);
+        self.locations.insert(entity, vec![location]);
 
         self.entity_id += 1;
 
         entity.clone()
-    }
-
-    /// Get specific component of entity
-    pub fn get_component<C: Component>(&mut self, entity: &Entity) -> Option<&C> {
-        let type_id = TypeId::of::<C>();
-
-        let component_locations = self.locations.get(&entity);
-
-        // Get archetype that the entity is assigned to
-        let archetype = self
-            .archetypes
-            .find_from_entity(entity)
-            .expect("Entity has no archetype!");
-
-        // Look if archetype has component that wants to be accessed
-        let layout = archetype.layout().clone();
-        if layout.containes_type(type_id) {
-            let index = layout
-                .into_iter()
-                .position(|component_id| component_id == type_id)
-                .unwrap();
-
-            let storage_index = component_locations[index];
-
-            let storage = self.components.get_storage::<C>();
-            let component = storage.get_component(storage_index.into());
-
-            Some(component)
-        } else {
-            None
-        }
     }
 
     /// Extend an enity's compnents by one
@@ -107,16 +95,23 @@ impl World {
 
         current_archetype.unassigne_entity(entity);
 
-        if let Some(archetype) = self.archetypes.find_from_layout_mut(&new_layout) {
-            archetype.assigne_entity(entity)
-        } else {
-            let archetype = self.archetypes.create_from_layout(new_layout);
-            archetype.assigne_entity(entity);
-        }
+        let archetype = match self.archetypes.find_from_layout_mut(&new_layout) {
+            Some(archetype) => {
+                archetype.assigne_entity(&entity);
+                archetype
+            }
+            None => {
+                let archetype = self.archetypes.create_from_layout(new_layout);
+                archetype.assigne_entity(&entity);
+                archetype
+            }
+        };
 
         let storage = self.components.get_storage_mut::<C>();
         let storage_index = storage.push_component(component);
-        component_locations.push(storage_index);
+
+        let location = EntityLocation::new(archetype.index(), storage_index);
+        component_locations.push(location);
     }
 
     // Needs rewrite hihahuuuu
@@ -153,7 +148,7 @@ mod tests {
         let entity = world.spawn(Health(200.00));
 
         assert_eq!(
-            *world.get_component::<Health>(&entity).unwrap(),
+            *world.entry(&entity).get_component::<Health>().unwrap(),
             Health(200.00)
         );
     }
