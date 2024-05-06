@@ -31,9 +31,11 @@ impl World {
         }
     }
 
+    /// Returns an entry for a enity to provides read and write access for entitys components
     pub fn entry<'a>(&'a mut self, entity: &'a Entity) -> Entry<'a> {
         let archetype = self.archetypes.find_from_entity(entity).unwrap();
 
+        // Get all storages where entity stores its component data
         let mut components = HashMap::new();
         for component_id in archetype.layout().clone().into_iter() {
             let unknown_storage = self.components.get_storage_raw(component_id);
@@ -44,7 +46,7 @@ impl World {
         Entry::new(entity, archetype, components, locations)
     }
 
-    // Creates new enity and adds one component to it
+    /// Creates new enity and adds one component to it
     pub fn spawn<C: Component>(&mut self, component: C) -> Entity {
         let entity = Entity(self.entity_id);
 
