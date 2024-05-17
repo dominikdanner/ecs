@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     archetype::{ArchetypeStorage, EntityLayout},
-    entry::Entry,
+    entry::{EntryMut, EntryRef},
     location::EntityLocation,
     storage::Storage,
 };
@@ -29,21 +29,6 @@ impl World {
             archetypes: ArchetypeStorage::new(),
             components: ComponentStorages::new(),
         }
-    }
-
-    /// Returns an entry for a enity to provides read and write access for entitys components
-    pub fn entry<'a>(&'a mut self, entity: &'a Entity) -> Entry<'a> {
-        let archetype = self.archetypes.find_from_entity(entity).unwrap();
-
-        // Get all storages where entity stores its component data
-        let mut components = HashMap::new();
-        for component_id in archetype.layout().clone().into_iter() {
-            let unknown_storage = self.components.get_storage_raw(component_id);
-            components.insert(component_id, unknown_storage);
-        }
-
-        let locations = self.locations.get(entity);
-        Entry::new(entity, archetype, components, locations)
     }
 
     /// Creates new enity and adds one component to it
@@ -81,39 +66,28 @@ impl World {
         entity.clone()
     }
 
-    /// Extend an enity's compnents by one
-    pub fn extend<C: Component>(&mut self, entity: &Entity, component: C) {
-        let component_locations = self.locations.get_mut(entity);
+    /// Returns an entry for a enity to provides read and write access for entitys components
+    pub fn entry_mut<'a>(&'a mut self, entity: &'a Entity) -> EntryMut<'a> {
+        EntryMut::new(
+            entity,
+            &mut self.archetypes,
+            &mut self.components,
+            &mut self.locations,
+        )
+    }
 
-        // Get archetype that the entity is assigned to
-        let current_archetype = self
-            .archetypes
-            .find_from_entity_mut(entity)
-            .expect("Entity has no archetype!");
+    /// Returns an entry for a enity to provides read only access for entitys components
+    pub fn entry<'a>(&'a self, entity: &'a Entity) -> EntryRef<'a> {
+        let archetype = self.archetypes.find_from_entity(entity).unwrap();
 
-        // Create new layout for entity
-        let mut new_layout = current_archetype.layout().clone();
-        new_layout.register_component::<C>();
+        let mut components = HashMap::new();
+        for component_id in archetype.layout().clone().into_iter() {
+            let unknown_storage = self.components.get_storage_raw(component_id);
+            components.insert(component_id, unknown_storage);
+        }
 
-        current_archetype.unassigne_entity(entity);
-
-        let archetype = match self.archetypes.find_from_layout_mut(&new_layout) {
-            Some(archetype) => {
-                archetype.assigne_entity(&entity);
-                archetype
-            }
-            None => {
-                let archetype = self.archetypes.create_from_layout(new_layout);
-                archetype.assigne_entity(&entity);
-                archetype
-            }
-        };
-
-        let storage = self.components.get_storage_mut::<C>();
-        let storage_index = storage.push_component(component);
-
-        let location = EntityLocation::new(archetype.index(), storage_index);
-        component_locations.push(location);
+        let locations = self.locations.get(entity);
+        EntryRef::new(entity, archetype, components, locations)
     }
 
     // Needs rewrite hihahuuuu

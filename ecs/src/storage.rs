@@ -23,8 +23,11 @@ pub trait Storage<T: Debug>: Debug + Any {
     // Pushes new component into the storage
     fn push_component(&mut self, component: T) -> ComponentIndex;
 
-    // Returns the component with a given index
-    fn get_component(&self, index: ComponentIndex) -> &T;
+    // Returns a reference to a component with a given index
+    fn get_component(&self, index: ComponentIndex) -> Option<&T>;
+
+    // Returns mutabel reference to a component with a given index
+    fn get_component_mut(&mut self, index: ComponentIndex) -> Option<&mut T>;
 
     // Returns all components stored as a slice
     fn as_slice(&self) -> &[T];
@@ -94,9 +97,17 @@ impl ComponentStorages {
         }
     }
 
-    /// Gets storage data but type is not known
+    /// Reference to storage but type is unknown
     pub fn get_storage_raw(&self, type_id: TypeId) -> &Box<dyn Any> {
         match self.storages.get(&type_id) {
+            Some(unknown_storage) => unknown_storage,
+            None => unreachable!("We're fucked"),
+        }
+    }
+
+    /// Mutable Reference to storage but type is unknown
+    pub fn get_storage_raw_mut(&mut self, type_id: TypeId) -> &mut Box<dyn Any> {
+        match self.storages.get_mut(&type_id) {
             Some(unknown_storage) => unknown_storage,
             None => unreachable!("We're fucked"),
         }
@@ -133,8 +144,12 @@ where
         self.storage.len()
     }
 
-    fn get_component(&self, index: ComponentIndex) -> &T {
-        self.storage.get(index).unwrap()
+    fn get_component(&self, index: ComponentIndex) -> Option<&T> {
+        self.storage.get(index)
+    }
+
+    fn get_component_mut(&mut self, index: ComponentIndex) -> Option<&mut T> {
+        self.storage.get_mut(index)
     }
 
     fn as_slice(&self) -> &[T] {

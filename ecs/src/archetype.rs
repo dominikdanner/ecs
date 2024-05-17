@@ -56,10 +56,6 @@ impl Archetype {
     }
 }
 
-pub trait LayoutFilter {
-    fn matches_layout(&self, other: EntityLayout);
-}
-
 #[derive(Debug, Clone)]
 pub struct EntityLayout {
     layout: Vec<TypeId>,
